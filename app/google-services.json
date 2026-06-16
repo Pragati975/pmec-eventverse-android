@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "718057556356",
+    "project_id": "pmeceventverse",
+    "storage_bucket": "pmeceventverse.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718057556356:android:270e0ed77bf7577f4db5d1",
+        "android_client_info": {
+          "package_name": "com.pmec.eventverse"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718057556356-nc43o97knkmvvceqgcv0q9ldvvjr4qlm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pmec.eventverse",
+            "certificate_hash": "a8a21f76b7660d585ef907b84a2fc10a3ce56ffa"
+          }
+        },
+        {
+          "client_id": "718057556356-arvi90ls89vmh9fkj9kl9qbkfg8ct1b5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB83uyzWkCkuPRXxCKxbIc-rnsMdE1yock"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718057556356-arvi90ls89vmh9fkj9kl9qbkfg8ct1b5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

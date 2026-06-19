@@ -7,12 +7,20 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.google.firebase.firestore.FirebaseFirestore
 import com.pmec.eventverse.navigation.AppNavigation
 import com.pmec.eventverse.ui.theme.PMECEventVerseTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable Firestore offline persistence
+        FirebaseFirestore.getInstance().firestoreSettings =
+            com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .build()
+
         enableEdgeToEdge()
         setContent {
             PMECEventVerseTheme {

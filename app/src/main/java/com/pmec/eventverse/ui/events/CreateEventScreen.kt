@@ -20,6 +20,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.pmec.eventverse.data.model.Event
@@ -45,6 +54,13 @@ fun CreateEventScreen(
     var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var selectedTime by remember { mutableStateOf("09:00 AM") }
     var showSuccess by remember { mutableStateOf(false) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
 
     val categories = listOf("TECHNICAL", "CULTURAL", "SPORTS", "WORKSHOP")
 
@@ -135,7 +151,38 @@ fun CreateEventScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
+// Poster Image Picker
+            SectionLabel("Event Poster (Optional)")
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(SurfaceDark, RoundedCornerShape(12.dp))
+                    .clickable { imagePicker.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedImageUri != null) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Selected poster",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.AddPhotoAlternate,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Tap to add poster image", color = TextMuted, fontSize = 13.sp)
+                    }
+                }
+            }
 
+            Spacer(modifier = Modifier.height(16.dp))
             // Title
             SectionLabel("Event Title *")
             StyledTextField(
@@ -285,9 +332,9 @@ fun CreateEventScreen(
                         organizerName = currentUser?.email ?: "Organizer",
                         maxParticipants = maxParticipants.toIntOrNull() ?: 50,
                         status = "UPCOMING",
-                        isApproved = false
+                        approved = false
                     )
-                    eventViewModel.createEvent(event)
+                    eventViewModel.createEventWithImage(event, selectedImageUri)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

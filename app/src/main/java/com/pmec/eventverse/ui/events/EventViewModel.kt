@@ -33,6 +33,29 @@ class EventViewModel : ViewModel() {
         }
     }
 
+    fun createEventWithImage(event: Event, imageUri: android.net.Uri?) {
+        viewModelScope.launch {
+            eventState.value = EventState.Loading
+            try {
+                var finalEvent = event
+                if (imageUri != null) {
+                    val cloudinaryRepo = com.pmec.eventverse.data.repository.CloudinaryRepository()
+                    val uploadResult = cloudinaryRepo.uploadImage(imageUri)
+                    if (uploadResult.isSuccess) {
+                        finalEvent = event.copy(posterUrl = uploadResult.getOrNull() ?: "")
+                    }
+                }
+                val result = repository.createEvent(finalEvent)
+                eventState.value = if (result.isSuccess)
+                    EventState.Success("Event created! Waiting for admin approval.")
+                else
+                    EventState.Error(result.exceptionOrNull()?.message ?: "Failed to create event")
+            } catch (e: Exception) {
+                eventState.value = EventState.Error(e.message ?: "Upload failed")
+            }
+        }
+    }
+
     fun loadApprovedEvents() {
         viewModelScope.launch {
             eventState.value = EventState.Loading

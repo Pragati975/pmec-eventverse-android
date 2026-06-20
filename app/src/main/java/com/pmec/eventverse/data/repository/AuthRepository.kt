@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pmec.eventverse.data.model.User
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 class AuthRepository {
     private val auth = FirebaseAuth.getInstance()
@@ -43,8 +44,21 @@ class AuthRepository {
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
             val uid = result.user!!.uid
-            val doc = db.collection("users").document(uid).get().await()
-            val role = doc.getString("role") ?: "student"
+
+            // Add timeout — if Firestore takes too long, default to role from cache
+            val role = try {
+                withTimeout(5000L) {
+                    val doc = db.collection("users").document(uid).get().await()
+                    doc.getString("role") ?: "STUDENT"
+                }
+            } catch (e: Exception) {
+                // If timeout or offline, try getting from cache
+                val doc = db.collection("users").document(uid)
+                    .get(com.google.firebase.firestore.Source.CACHE)
+                    .await()
+                doc.getString("role") ?: "STUDENT"
+            }
+
             Result.success(role)
         } catch (e: Exception) {
             Result.failure(e)

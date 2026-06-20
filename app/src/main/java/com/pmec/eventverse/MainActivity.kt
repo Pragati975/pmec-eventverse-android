@@ -15,6 +15,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize Cloudinary
+        val config = hashMapOf("cloud_name" to "dzhqtesya")
+        com.cloudinary.android.MediaManager.init(this, config)
+
         // Enable Firestore offline persistence
         FirebaseFirestore.getInstance().firestoreSettings =
             com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()

@@ -87,10 +87,13 @@ fun AppNavigation() {
                 onLogout = {
                     repository.logout()
                     navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                },
+                onEventClick = { event ->
+                    selectedEvent = event
+                    navController.navigate("event_detail")
                 }
             )
         }
-
         composable("create_event") {
             CreateEventScreen(
                 onBack = { navController.popBackStack() },

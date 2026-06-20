@@ -15,6 +15,6 @@ data class Event(
     val posterUrl: String = "",
     val status: String = "UPCOMING",
     val tags: List<String> = emptyList(),
-    val isApproved: Boolean = false,
+    val approved: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Event
 import com.pmec.eventverse.ui.theme.AccentPurple
 import com.pmec.eventverse.data.model.Event
@@ -24,27 +25,38 @@ import com.pmec.eventverse.ui.theme.ErrorRed
 @Composable
 fun StudentDashboard(
     onLogout: () -> Unit,
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    onMyRegistrations: () -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         HomeFeedScreen(
             userName = "Pragati",
             onEventClick = onEventClick
         )
-        FloatingActionButton(
-            onClick = onLogout,
+        Column(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 56.dp, end = 16.dp)
-                .size(40.dp),
-            containerColor = ErrorRed,
-            contentColor = Color.White
+                .align(Alignment.BottomEnd)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.ExitToApp,
-                contentDescription = "Logout",
-                modifier = Modifier.size(20.dp)
-            )
+            FloatingActionButton(
+                onClick = onLogout,
+                containerColor = ErrorRed,
+                contentColor = Color.White,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = "Logout",
+                    modifier = Modifier.size(20.dp))
+            }
+            FloatingActionButton(
+                onClick = onMyRegistrations,
+                containerColor = AccentPurple,
+                contentColor = Color.White,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(Icons.Default.ConfirmationNumber, contentDescription = "My Registrations",
+                    modifier = Modifier.size(20.dp))
+            }
         }
     }
 }

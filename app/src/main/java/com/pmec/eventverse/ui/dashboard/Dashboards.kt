@@ -6,6 +6,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Event
+import com.pmec.eventverse.ui.theme.AccentPurple
 import com.pmec.eventverse.data.model.Event
 import com.pmec.eventverse.ui.admin.AdminPanelScreen
 import androidx.compose.ui.Alignment
@@ -51,7 +53,8 @@ fun StudentDashboard(
 fun OrganizerDashboard(
     onLogout: () -> Unit,
     onCreateEvent: () -> Unit = {},
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    onMyEvents: () -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         HomeFeedScreen(
@@ -71,6 +74,15 @@ fun OrganizerDashboard(
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(Icons.Default.ExitToApp, contentDescription = "Logout",
+                    modifier = Modifier.size(20.dp))
+            }
+            FloatingActionButton(
+                onClick = onMyEvents,
+                containerColor = AccentPurple,
+                contentColor = Color.White,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(Icons.Default.Event, contentDescription = "My Events",
                     modifier = Modifier.size(20.dp))
             }
             FloatingActionButton(

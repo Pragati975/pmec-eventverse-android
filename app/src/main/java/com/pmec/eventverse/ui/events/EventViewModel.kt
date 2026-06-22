@@ -125,4 +125,15 @@ class EventViewModel : ViewModel() {
     fun resetState() {
         eventState.value = EventState.Idle
     }
+
+    fun updateEvent(event: Event) {
+        viewModelScope.launch {
+            eventState.value = EventState.Loading
+            val result = repository.updateEvent(event)
+            eventState.value = if (result.isSuccess)
+                EventState.Success("Event updated successfully!")
+            else
+                EventState.Error(result.exceptionOrNull()?.message ?: "Failed to update event")
+        }
+    }
 }

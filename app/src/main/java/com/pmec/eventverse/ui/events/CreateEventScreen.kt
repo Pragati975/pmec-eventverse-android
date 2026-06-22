@@ -40,19 +40,20 @@ import java.util.*
 @Composable
 fun CreateEventScreen(
     onBack: () -> Unit,
-    onEventCreated: () -> Unit
+    onEventCreated: () -> Unit,
+    eventToEdit: Event? = null
 ) {
     val context = LocalContext.current
     val eventViewModel: EventViewModel = viewModel()
     val eventState by eventViewModel.eventState
 
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var venue by remember { mutableStateOf("") }
-    var maxParticipants by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("TECHNICAL") }
-    var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
-    var selectedTime by remember { mutableStateOf("09:00 AM") }
+    var title by remember { mutableStateOf(eventToEdit?.title ?: "") }
+    var description by remember { mutableStateOf(eventToEdit?.description ?: "") }
+    var venue by remember { mutableStateOf(eventToEdit?.venue ?: "") }
+    var maxParticipants by remember { mutableStateOf(eventToEdit?.maxParticipants?.toString() ?: "") }
+    var selectedCategory by remember { mutableStateOf(eventToEdit?.category ?: "TECHNICAL") }
+    var selectedDateMillis by remember { mutableStateOf(eventToEdit?.date ?: System.currentTimeMillis()) }
+    var selectedTime by remember { mutableStateOf(eventToEdit?.time ?: "09:00 AM") }
     var showSuccess by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -107,7 +108,7 @@ fun CreateEventScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Create Event",
+                        if (eventToEdit != null) "Edit Event" else "Create Event",
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -143,7 +144,7 @@ fun CreateEventScreen(
                         Text("✅", fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Event created! Waiting for admin approval.",
+                            if (eventToEdit != null) "Event updated successfully!" else "Event created! Waiting for admin approval.",
                             color = SuccessGreen,
                             fontWeight = FontWeight.Medium
                         )
@@ -321,20 +322,35 @@ fun CreateEventScreen(
                     if (title.isBlank() || venue.isBlank() || maxParticipants.isBlank()) {
                         return@Button
                     }
-                    val event = Event(
-                        title = title,
-                        description = description,
-                        category = selectedCategory,
-                        date = selectedDateMillis,
-                        time = selectedTime,
-                        venue = venue,
-                        organizerId = currentUser?.uid ?: "",
-                        organizerName = currentUser?.email ?: "Organizer",
-                        maxParticipants = maxParticipants.toIntOrNull() ?: 50,
-                        status = "UPCOMING",
-                        approved = false
-                    )
-                    eventViewModel.createEventWithImage(event, selectedImageUri)
+                    if (eventToEdit != null) {
+                        // EDIT MODE
+                        val updatedEvent = eventToEdit.copy(
+                            title = title,
+                            description = description,
+                            category = selectedCategory,
+                            date = selectedDateMillis,
+                            time = selectedTime,
+                            venue = venue,
+                            maxParticipants = maxParticipants.toIntOrNull() ?: 50
+                        )
+                        eventViewModel.updateEvent(updatedEvent)
+                    } else {
+                        // CREATE MODE
+                        val event = Event(
+                            title = title,
+                            description = description,
+                            category = selectedCategory,
+                            date = selectedDateMillis,
+                            time = selectedTime,
+                            venue = venue,
+                            organizerId = currentUser?.uid ?: "",
+                            organizerName = currentUser?.email ?: "Organizer",
+                            maxParticipants = maxParticipants.toIntOrNull() ?: 50,
+                            status = "UPCOMING",
+                            approved = false
+                        )
+                        eventViewModel.createEventWithImage(event, selectedImageUri)
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -350,7 +366,7 @@ fun CreateEventScreen(
                     )
                 } else {
                     Text(
-                        "Publish Event",
+                        if (eventToEdit != null) "Update Event" else "Publish Event",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )

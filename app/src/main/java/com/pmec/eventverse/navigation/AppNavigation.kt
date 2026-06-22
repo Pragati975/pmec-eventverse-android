@@ -1,6 +1,7 @@
 package com.pmec.eventverse.navigation
 
 import androidx.compose.runtime.*
+import com.pmec.eventverse.ui.events.MyEventsScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +25,7 @@ fun AppNavigation() {
 
     // Shared selected event state
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
+    var eventToEdit by remember { mutableStateOf<Event?>(null) }
 
     fun navigateToDashboard(role: String) {
         val destination = when (role.uppercase()) {
@@ -78,7 +80,8 @@ fun AppNavigation() {
                 onEventClick = { event ->
                     selectedEvent = event
                     navController.navigate("event_detail")
-                }
+                },
+                onMyEvents = { navController.navigate("my_events") }
             )
         }
 
@@ -96,11 +99,30 @@ fun AppNavigation() {
         }
         composable("create_event") {
             CreateEventScreen(
-                onBack = { navController.popBackStack() },
-                onEventCreated = { navController.popBackStack() }
+                onBack = {
+                    eventToEdit = null
+                    navController.popBackStack()
+                },
+                onEventCreated = {
+                    eventToEdit = null
+                    navController.popBackStack()
+                },
+                eventToEdit = eventToEdit
             )
         }
-
+        composable("my_events") {
+            MyEventsScreen(
+                onBack = { navController.popBackStack() },
+                onEditEvent = { event ->
+                    eventToEdit = event
+                    navController.navigate("create_event")
+                },
+                onEventClick = { event ->
+                    selectedEvent = event
+                    navController.navigate("event_detail")
+                }
+            )
+        }
         composable("event_detail") {
             selectedEvent?.let { event ->
                 EventDetailScreen(

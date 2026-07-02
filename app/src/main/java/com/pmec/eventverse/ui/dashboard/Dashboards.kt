@@ -6,6 +6,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.QrCodeScanner
+import com.pmec.eventverse.ui.theme.SuccessGreen
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Event
 import com.pmec.eventverse.ui.theme.AccentPurple
@@ -13,6 +15,9 @@ import com.pmec.eventverse.data.model.Event
 import com.pmec.eventverse.ui.admin.AdminPanelScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -66,7 +71,8 @@ fun OrganizerDashboard(
     onLogout: () -> Unit,
     onCreateEvent: () -> Unit = {},
     onEventClick: (Event) -> Unit = {},
-    onMyEvents: () -> Unit = {}
+    onMyEvents: () -> Unit = {},
+    onScanQR: () -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         HomeFeedScreen(
@@ -86,6 +92,15 @@ fun OrganizerDashboard(
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(Icons.Default.ExitToApp, contentDescription = "Logout",
+                    modifier = Modifier.size(20.dp))
+            }
+            FloatingActionButton(
+                onClick = onScanQR,
+                containerColor = SuccessGreen,
+                contentColor = Color.White,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR",
                     modifier = Modifier.size(20.dp))
             }
             FloatingActionButton(

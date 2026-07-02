@@ -1,6 +1,7 @@
 package com.pmec.eventverse.navigation
 
 import androidx.compose.runtime.*
+import com.pmec.eventverse.ui.scanner.QRScannerScreen
 import com.pmec.eventverse.ui.events.MyRegistrationsScreen
 import com.pmec.eventverse.ui.events.MyEventsScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +58,11 @@ fun AppNavigation() {
                 onSignUpSuccess = { role -> navigateToDashboard(role) }
             )
         }
+        composable("qr_scanner") {
+            QRScannerScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
 
         composable("student_dashboard") {
             StudentDashboard(
@@ -85,7 +91,8 @@ fun AppNavigation() {
                     selectedEvent = event
                     navController.navigate("event_detail")
                 },
-                onMyEvents = { navController.navigate("my_events") }
+                onMyEvents = { navController.navigate("my_events") },
+                onScanQR = { navController.navigate("qr_scanner") }
             )
         }
 

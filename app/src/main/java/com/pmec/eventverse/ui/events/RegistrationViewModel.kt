@@ -26,28 +26,37 @@ class RegistrationViewModel : ViewModel() {
         viewModelScope.launch {
             registrationState.value = RegistrationState.Loading
             val result = repository.registerForEvent(registration)
-            registrationState.value = if (result.isSuccess)
-                RegistrationState.Success("Successfully registered! 🎉")
-            else
-                RegistrationState.Error(result.exceptionOrNull()?.message ?: "Registration failed")
+            if (result.isSuccess) {
+                // After successful registration, reload registration status
+                checkRegistration(registration.eventId, registration.userId)
+                registrationState.value = RegistrationState.Success("Successfully registered! 🎉")
+            } else {
+                registrationState.value = RegistrationState.Error(
+                    result.exceptionOrNull()?.message ?: "Registration failed"
+                )
+            }
         }
     }
 
     fun checkRegistration(eventId: String, userId: String) {
         viewModelScope.launch {
-            val result = repository.isUserRegistered(eventId, userId)
-            if (result.isSuccess) {
-                isRegistered.value = result.getOrNull() ?: false
-                // Get registration ID if registered
-                if (isRegistered.value) {
-                    val regResult = repository.getUserRegistrations(userId)
-                    if (regResult.isSuccess) {
-                        val reg = regResult.getOrNull()?.find {
-                            it.eventId == eventId && it.status == "CONFIRMED"
-                        }
-                        currentRegistrationId.value = reg?.registrationId ?: ""
+            try {
+                val result = repository.getRegistrationForEvent(eventId, userId)
+                if (result.isSuccess) {
+                    val registration = result.getOrNull()
+                    if (registration != null) {
+                        isRegistered.value = true
+                        currentRegistrationId.value = registration.registrationId
+                        android.util.Log.d("REG_CHECK", "Found registration ID: ${registration.registrationId}")
+                    } else {
+                        isRegistered.value = false
+                        currentRegistrationId.value = ""
+                        android.util.Log.d("REG_CHECK", "No registration found")
                     }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("REG_CHECK", "Error: ${e.message}")
+                isRegistered.value = false
             }
         }
     }
@@ -57,9 +66,12 @@ class RegistrationViewModel : ViewModel() {
             registrationState.value = RegistrationState.Loading
             val result = repository.getUserRegistrations(userId)
             if (result.isSuccess) {
-                registrations.value = result.getOrNull() ?: emptyList()
+                val regs = result.getOrNull() ?: emptyList()
+                android.util.Log.d("REG_LOAD", "Loaded ${regs.size} registrations")
+                registrations.value = regs
                 registrationState.value = RegistrationState.Idle
             } else {
+                android.util.Log.e("REG_LOAD", "Error: ${result.exceptionOrNull()?.message}")
                 registrationState.value = RegistrationState.Error("Failed to load registrations")
             }
         }
@@ -67,13 +79,21 @@ class RegistrationViewModel : ViewModel() {
 
     fun cancelRegistration(registrationId: String, eventId: String) {
         viewModelScope.launch {
+            android.util.Log.d("REG_CANCEL", "Cancelling registration ID: $registrationId")
+            if (registrationId.isEmpty()) {
+                registrationState.value = RegistrationState.Error("Registration ID not found")
+                return@launch
+            }
             registrationState.value = RegistrationState.Loading
             val result = repository.cancelRegistration(registrationId, eventId)
-            registrationState.value = if (result.isSuccess) {
+            if (result.isSuccess) {
                 isRegistered.value = false
-                RegistrationState.Success("Registration cancelled")
+                currentRegistrationId.value = ""
+                registrationState.value = RegistrationState.Success("Registration cancelled")
             } else {
-                RegistrationState.Error(result.exceptionOrNull()?.message ?: "Failed to cancel")
+                registrationState.value = RegistrationState.Error(
+                    result.exceptionOrNull()?.message ?: "Failed to cancel"
+                )
             }
         }
     }

@@ -11,7 +11,12 @@ class RegistrationRepository {
 
     suspend fun registerForEvent(registration: Registration): Result<String> {
         return try {
-            val existing = registrationsCollection
+            val db = FirebaseFirestore.getInstance()
+            val eventRef = db.collection("events").document(registration.eventId)
+            val registrationsRef = db.collection("registrations")
+
+            // Check duplicate first
+            val existing = registrationsRef
                 .whereEqualTo("eventId", registration.eventId)
                 .whereEqualTo("userId", registration.userId)
                 .whereEqualTo("status", "CONFIRMED")
@@ -19,30 +24,34 @@ class RegistrationRepository {
                 .await()
 
             if (!existing.isEmpty) {
-                return Result.failure(Exception("You are already registered for this event!"))
+                return Result.failure(Exception("You are already registered!"))
             }
 
-            val eventDoc = eventsCollection.document(registration.eventId).get().await()
-            val maxParticipants = eventDoc.getLong("maxParticipants")?.toInt() ?: 0
-            val currentRegistrations = eventDoc.getLong("currentRegistrations")?.toInt() ?: 0
+            // Use atomic transaction for seat count
+            var registrationId = ""
+            db.runTransaction { transaction ->
+                val eventSnapshot = transaction.get(eventRef)
+                val maxParticipants = eventSnapshot.getLong("maxParticipants")?.toInt() ?: 0
+                val currentRegistrations = eventSnapshot.getLong("currentRegistrations")?.toInt() ?: 0
 
-            if (currentRegistrations >= maxParticipants) {
-                return Result.failure(Exception("Sorry, this event is full!"))
-            }
+                if (currentRegistrations >= maxParticipants) {
+                    throw Exception("Sorry, this event is full!")
+                }
 
-            val docRef = registrationsCollection.document()
-            val qrData = "PMEC_${registration.eventId}_${registration.userId}_${docRef.id}"
-            val finalRegistration = registration.copy(
-                registrationId = docRef.id,
-                qrCode = qrData
-            )
-            docRef.set(finalRegistration).await()
+                // Create registration document
+                val docRef = registrationsRef.document()
+                registrationId = docRef.id
+                val qrData = "PMEC_${registration.eventId}_${registration.userId}_${docRef.id}"
+                val finalRegistration = registration.copy(
+                    registrationId = docRef.id,
+                    qrCode = qrData
+                )
 
-            eventsCollection.document(registration.eventId)
-                .update("currentRegistrations", currentRegistrations + 1)
-                .await()
+                transaction.set(docRef, finalRegistration)
+                transaction.update(eventRef, "currentRegistrations", currentRegistrations + 1)
+            }.await()
 
-            Result.success(docRef.id)
+            Result.success(registrationId)
         } catch (e: Exception) {
             Result.failure(e)
         }

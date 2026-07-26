@@ -3,6 +3,7 @@ package com.pmec.eventverse.ui.events
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -29,6 +30,9 @@ import java.util.*
 @Composable
 fun EventCard(
     event: Event,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit ={},
+    onViewFeedback: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val categoryColor = when (event.category) {
@@ -144,8 +148,12 @@ fun EventCard(
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    val dateStr = SimpleDateFormat("EEE, dd MMM yyyy • hh:mm a", Locale.getDefault())
+                    // Use the date portion from event.date, but the time portion
+                    // from event.time (the field the organizer actually set),
+                    // so this matches what's shown on the Event Detail screen.
+                    val dateOnlyStr = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
                         .format(Date(event.date))
+                    val dateStr = "$dateOnlyStr • ${event.time}"
                     Text(text = dateStr, fontSize = 12.sp, color = TextSecondary)
                 }
 
@@ -171,6 +179,28 @@ fun EventCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+// Registration progress bar
+                val progress = if (event.maxParticipants > 0)
+                    event.currentRegistrations.toFloat() / event.maxParticipants.toFloat()
+                else 0f
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = when {
+                        progress > 0.8f -> ErrorRed
+                        progress > 0.5f -> WarningYellow
+                        else -> SuccessGreen
+                    },
+                    trackColor = SurfaceDark
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
                 // Bottom row — registrations + organizer
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -1,6 +1,7 @@
 package com.pmec.eventverse.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pmec.eventverse.data.model.User
 import kotlinx.coroutines.tasks.await
@@ -57,6 +58,41 @@ class AuthRepository {
                     .get(com.google.firebase.firestore.Source.CACHE)
                     .await()
                 doc.getString("role") ?: "STUDENT"
+            }
+
+            Result.success(role)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Signs in (or, on first use, silently signs up) with a Google ID token.
+     * New Google sign-ins are always created as STUDENT — matches the rule that
+     * Organizer/Admin accounts are provisioned manually via Firebase Console.
+     */
+    suspend fun signInWithGoogle(idToken: String): Result<String> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = auth.signInWithCredential(credential).await()
+            val firebaseUser = result.user!!
+            val uid = firebaseUser.uid
+
+            val doc = db.collection("users").document(uid).get().await()
+            val role = if (doc.exists()) {
+                doc.getString("role") ?: "STUDENT"
+            } else {
+                val newUser = User(
+                    uid = uid,
+                    name = firebaseUser.displayName ?: "",
+                    email = firebaseUser.email ?: "",
+                    role = "STUDENT",
+                    department = "",
+                    year = "",
+                    rollNumber = ""
+                )
+                db.collection("users").document(uid).set(newUser).await()
+                "STUDENT"
             }
 
             Result.success(role)

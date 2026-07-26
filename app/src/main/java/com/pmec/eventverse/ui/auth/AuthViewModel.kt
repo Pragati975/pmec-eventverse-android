@@ -42,6 +42,22 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            authState.value = AuthState.Loading
+            val result = repository.signInWithGoogle(idToken)
+            authState.value = if (result.isSuccess)
+                AuthState.Success(result.getOrNull()!!)
+            else
+                AuthState.Error(result.exceptionOrNull()?.message ?: "Google sign-in failed")
+        }
+    }
+
+    /** Used when the Google account picker itself fails/cancels before we ever call the repository. */
+    fun setGoogleSignInError(message: String) {
+        authState.value = AuthState.Error(message)
+    }
+
     fun forgotPassword(email: String) {
         viewModelScope.launch {
             val result = repository.forgotPassword(email)

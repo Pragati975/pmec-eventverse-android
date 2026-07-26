@@ -24,7 +24,8 @@ import com.pmec.eventverse.ui.theme.*
 fun MyEventsScreen(
     onBack: () -> Unit,
     onEditEvent: (Event) -> Unit,
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    onViewFeedback: (Event) -> Unit = {}
 ) {
     val eventViewModel: EventViewModel = viewModel()
     val events by eventViewModel.events
@@ -81,6 +82,7 @@ fun MyEventsScreen(
                     event = event,
                     onEdit = { onEditEvent(event) },
                     onDelete = { eventViewModel.deleteEvent(event.eventId) },
+                    onViewFeedback = { onViewFeedback(event) },
                     onClick = { onEventClick(event) }
                 )
             }
@@ -93,6 +95,7 @@ fun MyEventCard(
     event: Event,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onViewFeedback: () -> Unit = {},
     onClick: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -101,7 +104,12 @@ fun MyEventCard(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Event", color = TextPrimary) },
-            text = { Text("Are you sure you want to delete '${event.title}'? This cannot be undone.", color = TextSecondary) },
+            text = {
+                Text(
+                    "Are you sure you want to delete '${event.title}'? This cannot be undone.",
+                    color = TextSecondary
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
@@ -132,7 +140,12 @@ fun MyEventCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(event.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(
+                        event.title,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(event.venue, color = TextMuted, fontSize = 12.sp)
                 }
@@ -178,22 +191,49 @@ fun MyEventCard(
 
                 Spacer(modifier = Modifier.weight(1f))
 
+                // Edit button — blue
                 IconButton(
                     onClick = onEdit,
                     modifier = Modifier
                         .size(36.dp)
                         .background(AccentBlue.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = AccentBlue, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = AccentBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
+                // Analytics button — purple
+                IconButton(
+                    onClick = onViewFeedback,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(AccentPurple.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                ) {
+                    Icon(
+                        Icons.Default.Analytics,
+                        contentDescription = "Feedback Analytics",
+                        tint = AccentPurple,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Delete button — red
                 IconButton(
                     onClick = { showDeleteDialog = true },
                     modifier = Modifier
                         .size(36.dp)
                         .background(ErrorRed.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = ErrorRed,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

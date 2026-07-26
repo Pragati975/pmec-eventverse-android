@@ -21,7 +21,18 @@ class EventViewModel : ViewModel() {
     var events = mutableStateOf<List<Event>>(emptyList())
     var filteredEvents = mutableStateOf<List<Event>>(emptyList())
     var selectedCategory = mutableStateOf("ALL")
+    var recommendedEvents = mutableStateOf<List<Event>>(emptyList())
+    private val recommenderRepository = com.pmec.eventverse.data.repository.RecommenderRepository()
 
+    fun loadRecommendedEvents(userId: String) {
+        viewModelScope.launch {
+            val result = recommenderRepository.getRecommendedEvents(userId)
+            if (result.isSuccess) {
+                recommendedEvents.value = result.getOrNull() ?: emptyList()
+                android.util.Log.d("RECOMMENDER", "Loaded ${recommendedEvents.value.size} recommendations")
+            }
+        }
+    }
     fun createEvent(event: Event) {
         viewModelScope.launch {
             eventState.value = EventState.Loading

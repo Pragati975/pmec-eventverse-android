@@ -3,69 +3,36 @@ package com.pmec.eventverse.ui.dashboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.material.icons.filled.QrCodeScanner
-import com.pmec.eventverse.ui.theme.SuccessGreen
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Event
-import com.pmec.eventverse.ui.theme.AccentPurple
-import com.pmec.eventverse.data.model.Event
-import com.pmec.eventverse.ui.admin.AdminPanelScreen
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.pmec.eventverse.ui.events.EventViewModel
+import com.pmec.eventverse.data.model.Event
+import com.pmec.eventverse.ui.admin.AdminPanelScreen
 import com.pmec.eventverse.ui.events.HomeFeedScreen
-import com.pmec.eventverse.ui.theme.AccentBlue
-import com.pmec.eventverse.ui.theme.ErrorRed
+import com.pmec.eventverse.ui.theme.*
 
 @Composable
 fun StudentDashboard(
     onLogout: () -> Unit,
     onEventClick: (Event) -> Unit = {},
-    onMyRegistrations: () -> Unit = {}
+    onMyRegistrations: () -> Unit = {},
+    onChatClick: () -> Unit = {},
+    onEditProfileClick: () -> Unit = {}
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        HomeFeedScreen(
-            userName = "Pragati",
-            onEventClick = onEventClick
-        )
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            FloatingActionButton(
-                onClick = onLogout,
-                containerColor = ErrorRed,
-                contentColor = Color.White,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = "Logout",
-                    modifier = Modifier.size(20.dp))
-            }
-            FloatingActionButton(
-                onClick = onMyRegistrations,
-                containerColor = AccentPurple,
-                contentColor = Color.White,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(Icons.Default.ConfirmationNumber, contentDescription = "My Registrations",
-                    modifier = Modifier.size(20.dp))
-            }
-        }
-    }
+    StudentMainScreen(
+        onLogout = onLogout,
+        onEventClick = onEventClick,
+        onChatClick = onChatClick,
+        onEditProfileClick = onEditProfileClick
+    )
 }
-
 @Composable
 fun OrganizerDashboard(
     onLogout: () -> Unit,
@@ -124,7 +91,10 @@ fun OrganizerDashboard(
 }
 
 @Composable
-fun AdminDashboard(onLogout: () -> Unit, onEventClick: (Event) -> Unit = {}) {
+fun AdminDashboard(
+    onLogout: () -> Unit,
+    onEventClick: (Event) -> Unit = {}
+) {
     AdminPanelScreen(
         onLogout = onLogout,
         onEventClick = onEventClick

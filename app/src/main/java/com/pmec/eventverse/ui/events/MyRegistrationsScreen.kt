@@ -29,14 +29,39 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyRegistrationsScreen(onBack: () -> Unit) {
+fun MyRegistrationsScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val registrationViewModel: RegistrationViewModel = viewModel()
     val registrations by registrationViewModel.registrations
     val registrationState by registrationViewModel.registrationState
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     var selectedQRRegistration by remember { mutableStateOf<Registration?>(null) }
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("All", "Confirmed", "Cancelled")
 
+    ScrollableTabRow(
+        selectedTabIndex = selectedTab,
+        containerColor = SurfaceDark,
+        contentColor = AccentBlue,
+        edgePadding = 16.dp
+    ) {
+        tabs.forEachIndexed { index, title ->
+            Tab(
+                selected = selectedTab == index,
+                onClick = { selectedTab = index },
+                text = { Text(title, fontSize = 13.sp) }
+            )
+        }
+    }
+
+    val filteredRegistrations = when (selectedTab) {
+        1 -> registrations.filter { it.status == "CONFIRMED" }
+        2 -> registrations.filter { it.status == "CANCELLED" }
+        else -> registrations
+    }
     LaunchedEffect(Unit) {
         registrationViewModel.loadUserRegistrations(currentUserId)
     }
@@ -65,7 +90,7 @@ fun MyRegistrationsScreen(onBack: () -> Unit) {
         containerColor = BackgroundDark
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
@@ -112,6 +137,20 @@ fun MyRegistrationsScreen(onBack: () -> Unit) {
     }
 }
 
+/**
+ * Registration doesn't carry the event's time-of-day (only eventDate), so this
+ * compares at day granularity: anything dated before today counts as past/completed.
+ */
+private fun isRegistrationEventPast(eventDate: Long): Boolean {
+    val startOfToday = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    return eventDate < startOfToday
+}
+
 @Composable
 fun RegistrationCard(
     registration: Registration,
@@ -120,6 +159,15 @@ fun RegistrationCard(
 ) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     val isCancelled = registration.status == "CANCELLED"
+    val isPastEvent = registration.status == "CONFIRMED" && isRegistrationEventPast(registration.eventDate)
+
+    val displayStatus = if (isPastEvent) "COMPLETED" else registration.status
+    val statusColor = when {
+        isPastEvent -> TextMuted
+        registration.status == "CONFIRMED" -> SuccessGreen
+        registration.status == "CANCELLED" -> ErrorRed
+        else -> WarningYellow
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -152,22 +200,14 @@ fun RegistrationCard(
                 Box(
                     modifier = Modifier
                         .background(
-                            when (registration.status) {
-                                "CONFIRMED" -> SuccessGreen.copy(alpha = 0.2f)
-                                "CANCELLED" -> ErrorRed.copy(alpha = 0.2f)
-                                else -> WarningYellow.copy(alpha = 0.2f)
-                            },
+                            statusColor.copy(alpha = 0.2f),
                             RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        registration.status,
-                        color = when (registration.status) {
-                            "CONFIRMED" -> SuccessGreen
-                            "CANCELLED" -> ErrorRed
-                            else -> WarningYellow
-                        },
+                        displayStatus,
+                        color = statusColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -234,21 +274,24 @@ fun RegistrationCard(
                         Text("View QR", color = AccentBlue, fontSize = 12.sp)
                     }
 
-                    OutlinedButton(
-                        onClick = onCancel,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed)
-                    ) {
-                        Icon(
-                            Icons.Default.Cancel,
-                            contentDescription = null,
-                            tint = ErrorRed,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cancel", color = ErrorRed, fontSize = 12.sp)
+                    // Past events can't be cancelled — only show Cancel for upcoming ones.
+                    if (!isPastEvent) {
+                        OutlinedButton(
+                            onClick = onCancel,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed)
+                        ) {
+                            Icon(
+                                Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = ErrorRed,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cancel", color = ErrorRed, fontSize = 12.sp)
+                        }
                     }
                 }
             }

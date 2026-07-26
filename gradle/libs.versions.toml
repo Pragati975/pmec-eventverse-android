@@ -2,6 +2,8 @@
 agp = "8.9.2"
 kotlin = "2.0.21"
 coil = "2.6.0"
+firebaseCrashlytics = "19.0.3"
+crashlyticsPlugin = "3.0.2"
 coreKtx = "1.18.0"
 junit = "4.13.2"
 zxing = "3.5.2"
@@ -9,17 +11,23 @@ zxingAndroid = "4.3.0"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 cloudinary = "2.5.0"
+shimmer = "1.3.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 composeBom = "2024.09.00"
 firebaseBom = "33.1.2"
 googleServices = "4.4.2"
+generativeai = "0.9.0"
 navigationCompose = "2.7.7"
+navigationAnimated = "2.7.7"
 materialIconsExtended = "1.7.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "firebaseCrashlytics" }
+generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
+shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version.ref = "shimmer" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 zxing-android = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroid" }
 cloudinary-android = { group = "com.cloudinary", name = "cloudinary-android", version.ref = "cloudinary" }
@@ -46,6 +54,7 @@ androidx-material-icons-extended = { group = "androidx.compose.material", name =
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsPlugin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

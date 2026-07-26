@@ -1,5 +1,9 @@
 package com.pmec.eventverse.ui.events
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,7 +29,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pmec.eventverse.data.model.Event
 import com.pmec.eventverse.data.model.Registration
+import com.pmec.eventverse.notifications.NotificationHelper
+import com.pmec.eventverse.notifications.NotificationScheduler
 import com.pmec.eventverse.ui.theme.*
+import com.pmec.eventverse.util.EventTimeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -32,8 +40,10 @@ import java.util.*
 @Composable
 fun EventDetailScreen(
     event: Event,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onFeedback: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val registrationViewModel: RegistrationViewModel = viewModel()
     val registrationState by registrationViewModel.registrationState
     val isRegistered by registrationViewModel.isRegistered
@@ -43,11 +53,23 @@ fun EventDetailScreen(
     val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
     val seatsLeft = event.maxParticipants - event.currentRegistrations
     val isFull = seatsLeft <= 0
+    val isPast = EventTimeUtils.isEventPast(event)
 
     var showSuccessDialog by remember { mutableStateOf(false) }
     var userProfile by remember { mutableStateOf<Map<String, Any>?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Android 13+ requires runtime permission to post notifications.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* no-op: if denied, notifications for this event silently won't show */ }
 
     LaunchedEffect(Unit) {
+        NotificationHelper.createNotificationChannel(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         currentUser?.uid?.let { uid ->
             registrationViewModel.checkRegistration(event.eventId, uid)
             FirebaseFirestore.getInstance()
@@ -61,8 +83,28 @@ fun EventDetailScreen(
     }
 
     LaunchedEffect(registrationState) {
-        if (registrationState is RegistrationState.Success) {
-            showSuccessDialog = true
+        when (registrationState) {
+            is RegistrationState.Success -> {
+                showSuccessDialog = true
+
+                // Fire the "registered" notification immediately, then schedule the
+                // day-before reminder and the post-event feedback request.
+                NotificationHelper.showRegistrationConfirmed(
+                    context = context,
+                    eventTitle = event.title,
+                    notificationId = NotificationHelper.NOTIFICATION_ID_REGISTRATION + event.eventId.hashCode()
+                )
+                NotificationScheduler.scheduleEventReminder(context, event)
+                NotificationScheduler.scheduleFeedbackRequest(context, event)
+            }
+            is RegistrationState.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = (registrationState as RegistrationState.Error).message,
+                    duration = SnackbarDuration.Short
+                )
+                registrationViewModel.resetState()
+            }
+            else -> {}
         }
     }
 
@@ -100,6 +142,17 @@ fun EventDetailScreen(
     }
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = CardDark,
+                    contentColor = TextPrimary,
+                    actionColor = AccentBlue,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { },
@@ -124,33 +177,20 @@ fun EventDetailScreen(
                     .padding(16.dp)
             ) {
                 if (isRegistered) {
+                    // Feedback button
                     OutlinedButton(
-                        onClick = {
-                            registrationViewModel.cancelRegistration(
-                                currentRegistrationId,
-                                event.eventId
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
+                        onClick = onFeedback,
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AccentPurple)
                     ) {
-                        Icon(
-                            Icons.Default.Cancel,
-                            contentDescription = null,
-                            tint = ErrorRed,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Cancel Registration",
-                            color = ErrorRed,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("📝", fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Give Feedback", color = AccentPurple, fontWeight = FontWeight.Medium)
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                 } else {
                     Button(
                         onClick = {
@@ -174,9 +214,9 @@ fun EventDetailScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isFull) TextMuted else AccentBlue
+                            containerColor = if (isFull || isPast) TextMuted else AccentBlue
                         ),
-                        enabled = !isFull && registrationState !is RegistrationState.Loading
+                        enabled = !isFull && !isPast && registrationState !is RegistrationState.Loading
                     ) {
                         if (registrationState is RegistrationState.Loading) {
                             CircularProgressIndicator(
@@ -185,28 +225,26 @@ fun EventDetailScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = if (isFull) Icons.Default.Block
-                                else Icons.Default.HowToReg,
+                                imageVector = when {
+                                    isPast -> Icons.Default.EventBusy
+                                    isFull -> Icons.Default.Block
+                                    else -> Icons.Default.HowToReg
+                                },
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (isFull) "Event Full" else "Register Now",
+                                text = when {
+                                    isPast -> "Event Ended"
+                                    isFull -> "Event Full"
+                                    else -> "Register Now"
+                                },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
                         }
                     }
-                }
-
-                if (registrationState is RegistrationState.Error) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = (registrationState as RegistrationState.Error).message,
-                        color = ErrorRed,
-                        fontSize = 12.sp
-                    )
                 }
             }
         }
@@ -217,7 +255,6 @@ fun EventDetailScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Event Banner
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -443,19 +480,9 @@ fun InfoMiniCard(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                value,
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
+            Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(label, color = TextSecondary, fontSize = 11.sp)
         }
     }
@@ -472,21 +499,11 @@ fun EventInfoRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(20.dp)
-        )
+        Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(label, color = TextMuted, fontSize = 11.sp)
-            Text(
-                value,
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Text(value, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

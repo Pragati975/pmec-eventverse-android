@@ -2,6 +2,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
 }
@@ -17,8 +18,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
 
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
+        )
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -37,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -46,7 +53,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.coil.compose)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    implementation(libs.generativeai)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation(libs.zxing.core)
+    implementation(libs.shimmer)
+    implementation(libs.firebase.crashlytics)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("androidx.compose.animation:animation:1.7.0")
     implementation(libs.zxing.android)
     implementation(libs.cloudinary.android)
     implementation(platform(libs.androidx.compose.bom))

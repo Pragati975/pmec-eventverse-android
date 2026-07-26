@@ -23,14 +23,13 @@ import androidx.compose.ui.unit.sp
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.pmec.eventverse.data.model.Event
 import com.pmec.eventverse.ui.theme.*
 import java.text.SimpleDateFormat
@@ -46,6 +45,26 @@ fun CreateEventScreen(
     val context = LocalContext.current
     val eventViewModel: EventViewModel = viewModel()
     val eventState by eventViewModel.eventState
+
+    // Get current user at top level
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Fetch organizer's real name
+    var organizerDisplayName by remember { mutableStateOf("Organizer") }
+
+    LaunchedEffect(Unit) {
+        currentUser?.uid?.let { uid ->
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    organizerDisplayName = doc.getString("name")
+                        ?: currentUser.email
+                                ?: "Organizer"
+                }
+        }
+    }
 
     var title by remember { mutableStateOf(eventToEdit?.title ?: "") }
     var description by remember { mutableStateOf(eventToEdit?.description ?: "") }
@@ -130,11 +149,12 @@ fun CreateEventScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-
             if (showSuccess) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.2f)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = SuccessGreen.copy(alpha = 0.2f)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
@@ -144,7 +164,8 @@ fun CreateEventScreen(
                         Text("✅", fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            if (eventToEdit != null) "Event updated successfully!" else "Event created! Waiting for admin approval.",
+                            if (eventToEdit != null) "Event updated successfully!"
+                            else "Event created! Waiting for admin approval.",
                             color = SuccessGreen,
                             fontWeight = FontWeight.Medium
                         )
@@ -152,7 +173,8 @@ fun CreateEventScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
-// Poster Image Picker
+
+            // Poster Image Picker
             SectionLabel("Event Poster (Optional)")
             Box(
                 modifier = Modifier
@@ -184,7 +206,7 @@ fun CreateEventScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            // Title
+
             SectionLabel("Event Title *")
             StyledTextField(
                 value = title,
@@ -194,7 +216,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Description
             SectionLabel("Description *")
             OutlinedTextField(
                 value = description,
@@ -210,7 +231,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Category
             SectionLabel("Category *")
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -234,7 +254,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Date & Time Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -286,7 +305,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Venue
             SectionLabel("Venue *")
             StyledTextField(
                 value = venue,
@@ -296,7 +314,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Max Participants
             SectionLabel("Max Participants *")
             StyledTextField(
                 value = maxParticipants,
@@ -306,7 +323,6 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Error message
             if (eventState is EventState.Error) {
                 Text(
                     text = (eventState as EventState.Error).message,
@@ -315,15 +331,12 @@ fun CreateEventScreen(
                 )
             }
 
-            // Submit Button
-            val currentUser = FirebaseAuth.getInstance().currentUser
             Button(
                 onClick = {
                     if (title.isBlank() || venue.isBlank() || maxParticipants.isBlank()) {
                         return@Button
                     }
                     if (eventToEdit != null) {
-                        // EDIT MODE
                         val updatedEvent = eventToEdit.copy(
                             title = title,
                             description = description,
@@ -335,7 +348,6 @@ fun CreateEventScreen(
                         )
                         eventViewModel.updateEvent(updatedEvent)
                     } else {
-                        // CREATE MODE
                         val event = Event(
                             title = title,
                             description = description,
@@ -344,7 +356,7 @@ fun CreateEventScreen(
                             time = selectedTime,
                             venue = venue,
                             organizerId = currentUser?.uid ?: "",
-                            organizerName = currentUser?.email ?: "Organizer",
+                            organizerName = organizerDisplayName, // ✅ Real name now
                             maxParticipants = maxParticipants.toIntOrNull() ?: 50,
                             status = "UPCOMING",
                             approved = false

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import com.pmec.eventverse.data.model.Event
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -20,20 +19,41 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.pmec.eventverse.data.model.Event
 import com.pmec.eventverse.ui.theme.*
+import com.pmec.eventverse.util.EventTimeUtils
+import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeFeedScreen(
     userName: String = "Student",
     onEventClick: (Event) -> Unit = {},
-
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val eventViewModel: EventViewModel = viewModel()
     val events by eventViewModel.filteredEvents
     val eventState by eventViewModel.eventState
     val selectedCategory by eventViewModel.selectedCategory
+    val recommendedEvents by eventViewModel.recommendedEvents
+
     var searchQuery by remember { mutableStateOf("") }
+    var debouncedQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(searchQuery) {
+        delay(300)
+        debouncedQuery = searchQuery
+    }
+
+    LaunchedEffect(Unit) {
+        eventViewModel.loadApprovedEvents()
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            eventViewModel.loadRecommendedEvents(uid)
+        }
+    }
 
     val categories = listOf(
         "ALL" to "🎯",
@@ -43,25 +63,24 @@ fun HomeFeedScreen(
         "WORKSHOP" to "🔧"
     )
 
-    LaunchedEffect(Unit) {
-        eventViewModel.loadApprovedEvents()
-    }
+    // Only ever show events that haven't started yet.
+    val upcomingEvents: List<Event> = events.filterNot { EventTimeUtils.isEventPast(it) }
+    val upcomingRecommendedEvents: List<Event> = recommendedEvents.filterNot { EventTimeUtils.isEventPast(it) }
 
-    val filteredBySearch: List<com.pmec.eventverse.data.model.Event> =
-        if (searchQuery.isEmpty()) events
-        else events.filter { event ->
-            event.title.contains(searchQuery, ignoreCase = true) ||
-                    event.venue.contains(searchQuery, ignoreCase = true) ||
-                    event.category.contains(searchQuery, ignoreCase = true)
+    val filteredBySearch: List<Event> =
+        if (debouncedQuery.isEmpty()) upcomingEvents
+        else upcomingEvents.filter { event ->
+            event.title.contains(debouncedQuery, ignoreCase = true) ||
+                    event.venue.contains(debouncedQuery, ignoreCase = true) ||
+                    event.category.contains(debouncedQuery, ignoreCase = true)
         }
 
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(BackgroundDark),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Header
         item {
             Box(
                 modifier = Modifier
@@ -91,7 +110,15 @@ fun HomeFeedScreen(
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            // Add this line
+                            Text(
+                                text = "${filteredBySearch.size} events available",
+                                color = AccentBlue,
+                                fontSize = 12.sp
+                            )
                         }
+
+
                         IconButton(onClick = onNotificationClick) {
                             Icon(
                                 imageVector = Icons.Default.Notifications,
@@ -104,7 +131,6 @@ fun HomeFeedScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Search bar
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
@@ -132,7 +158,6 @@ fun HomeFeedScreen(
             }
         }
 
-        // Category Filters
         item {
             Column(modifier = Modifier.padding(top = 16.dp)) {
                 Text(
@@ -159,7 +184,13 @@ fun HomeFeedScreen(
             }
         }
 
-        // Events Header
+        item {
+            RecommendedEventsRow(
+                events = upcomingRecommendedEvents,
+                onEventClick = onEventClick
+            )
+        }
+
         item {
             Row(
                 modifier = Modifier
@@ -182,21 +213,12 @@ fun HomeFeedScreen(
             }
         }
 
-        // Loading state
         if (eventState is EventState.Loading) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = AccentBlue)
-                }
+            items(3) {
+                ShimmerEventCard()
             }
         }
 
-        // Empty state
         if (filteredBySearch.isEmpty() && eventState !is EventState.Loading) {
             item {
                 Box(
@@ -224,12 +246,12 @@ fun HomeFeedScreen(
             }
         }
 
-        // Event Cards
         items(filteredBySearch) { event ->
             Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                 EventCard(
                     event = event,
-                    onClick = { onEventClick(event) }
+                    onClick = { onEventClick(event) },
+                    onEdit = {}
                 )
             }
         }

@@ -3,6 +3,21 @@
 
 A full-stack Android event management app built for Parala Maharaja Engineering College (PMEC), Odisha.
 
+## 📱 Screenshots
+
+<p align="center">
+  <img src="screenshots/splash.png" width="220"/>
+  <img src="screenshots/login.png" width="220"/>
+  <img src="screenshots/home.png" width="220"/>
+  <img src="screenshots/chatbot.png" width="220"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/event.png" width="220"/>
+  <img src="screenshots/qr.png" width="220"/>
+  <img src="screenshots/profile.png" width="220"/>
+  <img src="screenshots/feedback.png" width="220"/>
+</p>
 
 
 ## ✨ Features
